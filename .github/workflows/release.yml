@@ -404,7 +404,7 @@ jobs:
           cp assets/brand/minddeck-app-icon.png \
             "${package_root}/usr/share/icons/hicolor/1024x1024/apps/minddeck.png"
 
-          package_version="${PACKAGE_VERSION/-/~}"
+          package_version="$(printf '%s' "${PACKAGE_VERSION}" | tr '-' '~')"
           sed "s|@DEBIAN_VERSION@|${package_version}|g" \
             linux/packaging/debian/DEBIAN/control \
             > "${package_root}/DEBIAN/control"
