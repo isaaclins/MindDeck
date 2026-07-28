@@ -1,0 +1,10 @@
+Package: minddeck
+Version: @DEBIAN_VERSION@
+Section: education
+Priority: optional
+Architecture: amd64
+Maintainer: MindDeck <noreply@minddeck.app>
+Depends: libgtk-3-0
+Description: Private, local-first flashcards
+ Create text-only decks, study difficult cards first, and share portable
+ snapshots without an account.

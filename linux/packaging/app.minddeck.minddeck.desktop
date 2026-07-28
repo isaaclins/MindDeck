@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=MindDeck
+Comment=Private, local-first flashcards
+Exec=/opt/minddeck/minddeck %u
+Icon=minddeck
+Terminal=false
+Categories=Education;
+MimeType=x-scheme-handler/minddeck;
+StartupNotify=true

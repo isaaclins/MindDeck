@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="MindDeck is a private, local-first flashcard app that helps you study the cards that need your attention."
+    />
+    <meta name="theme-color" content="#f8f1e5" />
+    <meta property="og:title" content="MindDeck - Make it. Flip it. Know it." />
+    <meta
+      property="og:description"
+      content="Create your own decks, learn what needs attention, and share complete decks without an account."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://isaaclins.github.io/MindDeck/" />
+    <meta
+      property="og:image"
+      content="https://isaaclins.github.io/MindDeck/images/minddeck-screen-concepts-v1.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./images/minddeck-app-icon.png" />
+    <link
+      rel="preload"
+      href="./fonts/PatrickHand-Regular.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
+    <script>
+      (() => {
+        const savedTheme = localStorage.getItem("minddeck-theme");
+        if (savedTheme === "light" || savedTheme === "dark") {
+          document.documentElement.dataset.theme = savedTheme;
+        }
+      })();
+    </script>
+    <title>MindDeck - Flashcards that stay with you</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

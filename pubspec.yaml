@@ -1,0 +1,39 @@
+name: minddeck
+description: A joyful, local-first flashcard app.
+publish_to: 'none'
+version: 0.1.0-beta.1+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  go_router: ^17.3.0
+  drift: ^2.34.3
+  drift_flutter: ^0.3.1
+  uuid: ^4.6.0
+  file_selector: ^1.1.0
+  share_plus: ^13.3.0
+  archive: ^4.0.9
+  crypto: ^3.0.7
+  app_links: ^7.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.34.5
+  build_runner: ^2.15.1
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: PatrickHand
+      fonts:
+        - asset: assets/fonts/PatrickHand-Regular.ttf
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito-Variable.ttf

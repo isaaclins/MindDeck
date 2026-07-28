@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    name: Flutter quality and Android smoke build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle*
+            android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Set up stable Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+          cache-key: "flutter-:os:-stable-:version:-:arch:-:hash:"
+          pub-cache-key: "flutter-pub-:os:-stable-:version:-:arch:-:hash:"
+
+      - name: Report toolchain
+        run: |
+          flutter --version
+          java -version
+
+      - name: Install dependencies from lockfile
+        run: flutter pub get --enforce-lockfile
+
+      - name: Verify generated sources are current
+        shell: bash
+        run: |
+          dart run build_runner build
+          if [[ -n "$(git status --porcelain --untracked-files=all -- '*.g.dart')" ]]; then
+            echo "::error::Generated Dart sources are stale. Run build_runner and commit the result."
+            git status --short -- '*.g.dart'
+            git diff -- '*.g.dart'
+            exit 1
+          fi
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test integration_test
+
+      - name: Run all tests
+        run: flutter test --coverage
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug
+
+      - name: Upload Android smoke-build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: minddeck-android-debug-${{ github.sha }}
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

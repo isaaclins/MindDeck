@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">MindDeck quick study</string>
+    <string name="widget_description">See what is due and jump into your next MindDeck review.</string>
+    <string name="widget_empty_title">Your next idea</string>
+    <string name="widget_empty_prompt">Open MindDeck and choose a deck</string>
+    <string name="widget_refresh">Refresh widget</string>
+    <string name="widget_study">Study now</string>
+    <plurals name="widget_due_cards">
+        <item quantity="one">%d card due</item>
+        <item quantity="other">%d cards due</item>
+    </plurals>
+</resources>

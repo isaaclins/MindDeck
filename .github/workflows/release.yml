@@ -1,0 +1,474 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# These portable builds deliberately avoid store signing and notarization, so the
+# workflow remains usable before Apple, Google, and Microsoft secrets are added.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    name: Validate release metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      artifact_suffix: ${{ steps.metadata.outputs.artifact_suffix }}
+      build_name: ${{ steps.metadata.outputs.build_name }}
+      build_number: ${{ steps.metadata.outputs.build_number }}
+      is_release: ${{ steps.metadata.outputs.is_release }}
+      is_prerelease: ${{ steps.metadata.outputs.is_prerelease }}
+      package_version: ${{ steps.metadata.outputs.package_version }}
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Validate tag and pubspec version
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pubspec_version="$(awk '/^version:/ { print $2; exit }' pubspec.yaml)"
+          if [[ -z "${pubspec_version}" ]]; then
+            echo "::error::pubspec.yaml does not declare a version."
+            exit 1
+          fi
+
+          package_version="${pubspec_version%%+*}"
+          build_number="${pubspec_version#*+}"
+          if [[ "${build_number}" == "${pubspec_version}" ]]; then
+            build_number="${GITHUB_RUN_NUMBER}"
+          fi
+          if [[ ! "${build_number}" =~ ^[0-9]+$ ]]; then
+            echo "::error::The Flutter build number must be an integer."
+            exit 1
+          fi
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            release_tag="${GITHUB_REF_NAME}"
+            semver_pattern='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.((0|[1-9][0-9]*)|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+            if [[ ! "${release_tag}" =~ ${semver_pattern} ]]; then
+              echo "::error::Release tags must follow Semantic Versioning, for example v1.2.3."
+              exit 1
+            fi
+
+            tag_version="${release_tag#v}"
+            tag_package_version="${tag_version%%+*}"
+            if [[ "${tag_package_version}" != "${package_version}" ]]; then
+              echo "::error::Tag ${release_tag} does not match pubspec version ${pubspec_version}."
+              exit 1
+            fi
+            is_release=true
+            artifact_suffix="${release_tag}"
+          else
+            release_tag="dev-${GITHUB_RUN_ID}"
+            is_release=false
+            artifact_suffix="${release_tag}"
+          fi
+
+          build_name="${package_version%%-*}"
+          if [[ "${package_version}" == *-* ]]; then
+            is_prerelease=true
+          else
+            is_prerelease=false
+          fi
+          {
+            echo "artifact_suffix=${artifact_suffix}"
+            echo "build_name=${build_name}"
+            echo "build_number=${build_number}"
+            echo "is_release=${is_release}"
+            echo "is_prerelease=${is_prerelease}"
+            echo "package_version=${package_version}"
+            echo "release_tag=${release_tag}"
+          } >> "${GITHUB_OUTPUT}"
+
+  verify:
+    name: Verify release candidate
+    needs: metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up stable Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+          cache-key: "flutter-:os:-stable-:version:-:arch:-:hash:"
+          pub-cache-key: "flutter-pub-:os:-stable-:version:-:arch:-:hash:"
+
+      - name: Install dependencies from lockfile
+        run: flutter pub get --enforce-lockfile
+
+      - name: Verify generated sources are current
+        shell: bash
+        run: |
+          dart run build_runner build
+          if [[ -n "$(git status --porcelain --untracked-files=all -- '*.g.dart')" ]]; then
+            echo "::error::Generated Dart sources are stale. Run build_runner and commit the result."
+            git status --short -- '*.g.dart'
+            git diff -- '*.g.dart'
+            exit 1
+          fi
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test integration_test
+
+      - name: Run all tests
+        run: flutter test
+
+  android:
+    name: Package Android
+    needs:
+      - metadata
+      - verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      ARTIFACT_SUFFIX: ${{ needs.metadata.outputs.artifact_suffix }}
+      BUILD_NAME: ${{ needs.metadata.outputs.build_name }}
+      BUILD_NUMBER: ${{ needs.metadata.outputs.build_number }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            android/**/*.gradle*
+            android/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Set up stable Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+          cache-key: "flutter-:os:-stable-:version:-:arch:-:hash:"
+          pub-cache-key: "flutter-pub-:os:-stable-:version:-:arch:-:hash:"
+
+      - name: Install dependencies from lockfile
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build development-signed Android beta
+        run: |
+          flutter build apk --release --build-name "${BUILD_NAME}" --build-number "${BUILD_NUMBER}"
+          mkdir -p release
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "release/minddeck-android-${ARTIFACT_SUFFIX}-development-signed.apk"
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: minddeck-android-${{ needs.metadata.outputs.artifact_suffix }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 30
+
+  ios:
+    name: Package unsigned iOS app
+    needs:
+      - metadata
+      - verify
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      ARTIFACT_SUFFIX: ${{ needs.metadata.outputs.artifact_suffix }}
+      BUILD_NAME: ${{ needs.metadata.outputs.build_name }}
+      BUILD_NUMBER: ${{ needs.metadata.outputs.build_number }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up stable Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+          cache-key: "flutter-:os:-stable-:version:-:arch:-:hash:"
+          pub-cache-key: "flutter-pub-:os:-stable-:version:-:arch:-:hash:"
+
+      - name: Install dependencies from lockfile
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build unsigned iOS app
+        run: |
+          flutter build ios --release --no-codesign --build-name "${BUILD_NAME}" --build-number "${BUILD_NUMBER}"
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/ios/iphoneos/Runner.app \
+            "release/minddeck-ios-${ARTIFACT_SUFFIX}-unsigned.zip"
+
+      - name: Upload unsigned iOS artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: minddeck-ios-${{ needs.metadata.outputs.artifact_suffix }}-unsigned
+          path: release/*
+          if-no-files-found: error
+          retention-days: 30
+
+  macos:
+    name: Package macOS
+    needs:
+      - metadata
+      - verify
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      ARTIFACT_SUFFIX: ${{ needs.metadata.outputs.artifact_suffix }}
+      BUILD_NAME: ${{ needs.metadata.outputs.build_name }}
+      BUILD_NUMBER: ${{ needs.metadata.outputs.build_number }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up stable Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+          cache-key: "flutter-:os:-stable-:version:-:arch:-:hash:"
+          pub-cache-key: "flutter-pub-:os:-stable-:version:-:arch:-:hash:"
+
+      - name: Install dependencies from lockfile
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build macOS app
+        shell: bash
+        run: |
+          flutter build macos --release --build-name "${BUILD_NAME}" --build-number "${BUILD_NUMBER}"
+          app_path="$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' -print -quit)"
+          if [[ -z "${app_path}" ]]; then
+            echo "::error::The macOS application bundle was not produced."
+            exit 1
+          fi
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent \
+            "${app_path}" \
+            "release/minddeck-macos-${ARTIFACT_SUFFIX}-unnotarized.zip"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: minddeck-macos-${{ needs.metadata.outputs.artifact_suffix }}-unnotarized
+          path: release/*
+          if-no-files-found: error
+          retention-days: 30
+
+  windows:
+    name: Package Windows
+    needs:
+      - metadata
+      - verify
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      ARTIFACT_SUFFIX: ${{ needs.metadata.outputs.artifact_suffix }}
+      BUILD_NAME: ${{ needs.metadata.outputs.build_name }}
+      BUILD_NUMBER: ${{ needs.metadata.outputs.build_number }}
+      PACKAGE_VERSION: ${{ needs.metadata.outputs.package_version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up stable Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+          cache-key: "flutter-:os:-stable-:version:-:arch:-:hash:"
+          pub-cache-key: "flutter-pub-:os:-stable-:version:-:arch:-:hash:"
+
+      - name: Install dependencies from lockfile
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build and package Windows app
+        shell: pwsh
+        run: |
+          flutter build windows --release --build-name "$env:BUILD_NAME" --build-number "$env:BUILD_NUMBER"
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Compress-Archive `
+            -Path build/windows/x64/runner/Release/* `
+            -DestinationPath "release/minddeck-windows-$env:ARTIFACT_SUFFIX-unsigned-portable.zip" `
+            -CompressionLevel Optimal
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup compiler was not found at $iscc"
+          }
+          & $iscc `
+            "/DMyAppVersion=$env:PACKAGE_VERSION" `
+            "/DArtifactSuffix=$env:ARTIFACT_SUFFIX" `
+            windows/installer/minddeck.iss
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: minddeck-windows-${{ needs.metadata.outputs.artifact_suffix }}-unsigned
+          path: release/*
+          if-no-files-found: error
+          retention-days: 30
+
+  linux:
+    name: Package Linux
+    needs:
+      - metadata
+      - verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ARTIFACT_SUFFIX: ${{ needs.metadata.outputs.artifact_suffix }}
+      BUILD_NAME: ${{ needs.metadata.outputs.build_name }}
+      BUILD_NUMBER: ${{ needs.metadata.outputs.build_number }}
+      RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            clang \
+            cmake \
+            libgtk-3-dev \
+            liblzma-dev \
+            libstdc++-12-dev \
+            ninja-build \
+            pkg-config
+
+      - name: Set up stable Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+          pub-cache: true
+          cache-key: "flutter-:os:-stable-:version:-:arch:-:hash:"
+          pub-cache-key: "flutter-pub-:os:-stable-:version:-:arch:-:hash:"
+
+      - name: Install dependencies from lockfile
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build and package Linux app
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build linux --release --build-name "${BUILD_NAME}" --build-number "${BUILD_NUMBER}"
+          mkdir -p release
+          tar -C build/linux/x64/release \
+            -czf "release/minddeck-linux-x64-${ARTIFACT_SUFFIX}-portable.tar.gz" \
+            bundle
+
+          package_root="release/deb-root"
+          install_root="${package_root}/opt/minddeck"
+          mkdir -p \
+            "${package_root}/DEBIAN" \
+            "${install_root}" \
+            "${package_root}/usr/share/applications" \
+            "${package_root}/usr/share/icons/hicolor/1024x1024/apps"
+          cp -a build/linux/x64/release/bundle/. "${install_root}/"
+          cp linux/packaging/app.minddeck.minddeck.desktop \
+            "${package_root}/usr/share/applications/"
+          cp assets/brand/minddeck-app-icon.png \
+            "${package_root}/usr/share/icons/hicolor/1024x1024/apps/minddeck.png"
+
+          package_version="${RELEASE_TAG#v}"
+          package_version="${package_version/-/~}"
+          sed "s/@DEBIAN_VERSION@/${package_version}/" \
+            linux/packaging/debian/DEBIAN/control \
+            > "${package_root}/DEBIAN/control"
+          dpkg-deb --root-owner-group --build \
+            "${package_root}" \
+            "release/minddeck-linux-amd64-${ARTIFACT_SUFFIX}.deb"
+          rm -rf "${package_root}"
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: minddeck-linux-${{ needs.metadata.outputs.artifact_suffix }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish GitHub Release
+    if: needs.metadata.outputs.is_release == 'true'
+    needs:
+      - metadata
+      - android
+      - ios
+      - macos
+      - windows
+      - linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      IS_PRERELEASE: ${{ needs.metadata.outputs.is_prerelease }}
+      RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Download packaged applications
+        uses: actions/download-artifact@v8
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Create checksums
+        working-directory: release-artifacts
+        run: sha256sum ./* > SHA256SUMS.txt
+
+      - name: Create or update GitHub Release
+        shell: bash
+        run: |
+          mapfile -t files < <(find release-artifacts -maxdepth 1 -type f -print | sort)
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" "${files[@]}" --clobber
+          else
+            prerelease_args=()
+            if [[ "${IS_PRERELEASE}" == "true" ]]; then
+              prerelease_args+=(--prerelease)
+            fi
+            gh release create "${RELEASE_TAG}" "${files[@]}" \
+              --verify-tag \
+              --generate-notes \
+              --title "MindDeck ${RELEASE_TAG}" \
+              "${prerelease_args[@]}"
+          fi

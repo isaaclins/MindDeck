@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_cream">#FFF9EC</color>
+    <color name="widget_ink">#252326</color>
+    <color name="widget_violet">#6947ED</color>
+    <color name="widget_yellow">#FFD64D</color>
+</resources>

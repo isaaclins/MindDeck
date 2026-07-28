@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#f8f1e5" />
+    <title>Open this deck in MindDeck</title>
+    <style>
+      @font-face {
+        font-family: "Patrick Hand";
+        src: url("../fonts/PatrickHand-Regular.ttf") format("truetype");
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: "Nunito";
+        src: url("../fonts/Nunito-Variable.ttf") format("truetype");
+        font-display: swap;
+      }
+
+      :root {
+        color-scheme: light dark;
+        --paper: #f8f1e5;
+        --paper-raised: #fffaf1;
+        --ink: #24212a;
+        --ink-soft: #5d5764;
+        --line: #c7b9a3;
+        --violet: #4e2ed0;
+        --violet-soft: #e8e0ff;
+        --rose: #f24f7a;
+        --yellow: #f6c945;
+        --shadow: rgba(93, 67, 38, 0.15);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100dvh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at 18% 10%, color-mix(in srgb, var(--yellow) 18%, transparent), transparent 22rem),
+          radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--violet-soft) 60%, transparent), transparent 26rem),
+          var(--paper);
+        color: var(--ink);
+        font-family: "Nunito", system-ui, sans-serif;
+      }
+
+      main {
+        width: min(100%, 720px);
+        padding: clamp(28px, 7vw, 64px);
+        border: 1.5px solid var(--line);
+        border-radius: 26px 18px 29px 20px;
+        background: var(--paper-raised);
+        box-shadow: 13px 15px 0 var(--shadow);
+        text-align: center;
+        transform: rotate(-0.4deg);
+      }
+
+      .mark {
+        width: 66px;
+        height: 66px;
+        margin: 0 auto 19px;
+        display: grid;
+        place-items: center;
+        border-radius: 22px 17px 24px 19px;
+        background: var(--violet);
+        color: #fffaf1;
+        box-shadow: 6px 7px 0 color-mix(in srgb, var(--violet) 35%, transparent);
+        font-family: "Patrick Hand", cursive;
+        font-size: 2rem;
+        transform: rotate(-5deg);
+      }
+
+      h1 {
+        max-width: 540px;
+        margin: 0 auto 15px;
+        font-family: "Patrick Hand", cursive;
+        font-size: clamp(2.8rem, 9vw, 5rem);
+        font-weight: 400;
+        line-height: 0.94;
+        letter-spacing: -0.025em;
+      }
+
+      .intro {
+        max-width: 540px;
+        margin: 0 auto 28px;
+        color: var(--ink-soft);
+        font-size: 1.05rem;
+        line-height: 1.6;
+      }
+
+      .open-button {
+        min-height: 52px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 26px;
+        border: 2px solid var(--violet);
+        border-radius: 16px 12px 18px 14px;
+        background: var(--violet);
+        color: #fffaf1;
+        box-shadow: 5px 6px 0 color-mix(in srgb, var(--violet) 30%, transparent);
+        font: 800 1rem "Nunito", sans-serif;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .open-button:hover {
+        transform: translateY(-2px) rotate(-1deg);
+      }
+
+      .open-button:active {
+        transform: translateY(1px);
+      }
+
+      .open-button[aria-disabled="true"] {
+        border-color: var(--line);
+        background: var(--line);
+        color: var(--ink);
+        box-shadow: none;
+        cursor: not-allowed;
+      }
+
+      .reopen-note {
+        max-width: 490px;
+        margin: 22px auto 0;
+        padding: 14px 17px;
+        border: 1px solid color-mix(in srgb, var(--rose) 60%, var(--line));
+        border-radius: 14px 10px 16px 12px;
+        background: color-mix(in srgb, var(--rose) 8%, var(--paper-raised));
+        color: var(--ink);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+
+      .downloads {
+        margin-top: 35px;
+        padding-top: 27px;
+        border-top: 1px solid var(--line);
+      }
+
+      .downloads h2 {
+        margin: 0 0 16px;
+        font-family: "Patrick Hand", cursive;
+        font-size: 1.8rem;
+        font-weight: 400;
+      }
+
+      .platforms {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 9px;
+      }
+
+      .platforms span,
+      .platforms a {
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px 9px 13px 10px;
+        color: var(--ink-soft);
+        font-size: 0.8rem;
+        font-weight: 750;
+        text-decoration: none;
+      }
+
+      .platforms a:hover {
+        border-color: var(--violet);
+        color: var(--ink);
+      }
+
+      .privacy {
+        margin: 25px 0 0;
+        color: var(--ink-soft);
+        font-size: 0.78rem;
+      }
+
+      .error {
+        color: var(--rose);
+      }
+
+      :focus-visible {
+        outline: 3px solid var(--yellow);
+        outline-offset: 4px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #1d1a22;
+          --paper-raised: #312b35;
+          --ink: #f8f1e8;
+          --ink-soft: #c5bbc9;
+          --line: #6a5e70;
+          --violet: #8065f5;
+          --violet-soft: #403561;
+          --rose: #ff7396;
+          --yellow: #f7d76c;
+          --shadow: rgba(6, 4, 8, 0.34);
+        }
+      }
+
+      @media (max-width: 520px) {
+        body {
+          padding: 14px;
+        }
+
+        main {
+          padding: 34px 21px;
+          box-shadow: 8px 9px 0 var(--shadow);
+        }
+
+        .open-button {
+          width: 100%;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true">MD</div>
+      <h1>Someone shared a deck with you.</h1>
+      <p class="intro" id="message">
+        Open MindDeck to preview the cards before anything is added to your library.
+      </p>
+      <a class="open-button" id="open-app" href="#" rel="nofollow">Open in MindDeck</a>
+      <p class="reopen-note">
+        Installing the app cannot carry this deck forward automatically. Install MindDeck, then reopen this exact link.
+      </p>
+
+      <section class="downloads" aria-labelledby="download-title">
+        <h2 id="download-title">Need the app first?</h2>
+        <div class="platforms" aria-label="MindDeck downloads">
+          <span>iPhone and iPad soon</span>
+          <a href="https://github.com/isaaclins/MindDeck/releases/tag/v0.1.0-beta.1">Android beta</a>
+          <a href="https://github.com/isaaclins/MindDeck/releases/tag/v0.1.0-beta.1">macOS beta</a>
+          <a href="https://github.com/isaaclins/MindDeck/releases/tag/v0.1.0-beta.1">Windows beta</a>
+          <a href="https://github.com/isaaclins/MindDeck/releases/tag/v0.1.0-beta.1">Linux beta</a>
+        </div>
+      </section>
+
+      <p class="privacy">The deck stays in this URL. This page does not upload or send its contents.</p>
+    </main>
+
+    <script>
+      (() => {
+        const payload = window.location.hash.slice(1);
+        const openButton = document.getElementById("open-app");
+        const message = document.getElementById("message");
+        const isMindDeckPayload = /^md1(?:[._-][A-Za-z0-9_-]+)+$/.test(payload);
+
+        if (!isMindDeckPayload) {
+          openButton.setAttribute("aria-disabled", "true");
+          openButton.removeAttribute("href");
+          message.classList.add("error");
+          message.textContent = "This sharing link is missing a valid MindDeck deck.";
+          return;
+        }
+
+        const appUrl = `minddeck://import#${payload}`;
+        const betaUrl = "https://github.com/isaaclins/MindDeck/releases/tag/v0.1.0-beta.1";
+        const isAppleMobile = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const fallbackUrl = isAppleMobile ? "../#download" : betaUrl;
+        let appOpened = false;
+        let attemptedAutomatically = false;
+
+        const markAppOpened = () => {
+          if (document.visibilityState === "hidden") {
+            appOpened = true;
+          }
+        };
+
+        const attemptOpen = ({ automatic = false } = {}) => {
+          appOpened = false;
+          attemptedAutomatically ||= automatic;
+          window.location.assign(appUrl);
+
+          window.setTimeout(() => {
+            if (appOpened || document.visibilityState === "hidden") {
+              return;
+            }
+
+            message.textContent = "MindDeck did not open. Taking you to the beta download.";
+            if (automatic) {
+              window.location.assign(fallbackUrl);
+            }
+          }, 1600);
+        };
+
+        document.addEventListener("visibilitychange", markAppOpened);
+        window.addEventListener("pagehide", () => {
+          appOpened = true;
+        });
+
+        openButton.href = appUrl;
+        openButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          attemptOpen({ automatic: false });
+        });
+
+        window.setTimeout(() => {
+          if (!attemptedAutomatically) {
+            attemptOpen({ automatic: true });
+          }
+        }, 250);
+      })();
+    </script>
+  </body>
+</html>
