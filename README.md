@@ -75,6 +75,8 @@ make start
 Use `make start DEVICE=<device>` to select a simulator or connected device.
 `make build` creates a release for the current desktop host, while
 `make build PLATFORM=apk` builds Android. Run `make help` for every shortcut.
+For a physical iPhone, `make install-ios DEVICE=<device>` installs a signed
+release build that can be opened normally from its home-screen icon.
 
 The equivalent direct Flutter commands remain available:
 

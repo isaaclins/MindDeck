@@ -10,6 +10,7 @@ DART ?= dart
 endif
 NPM ?= npm
 DEVICE ?=
+MODE ?= debug
 
 ifeq ($(OS),Windows_NT)
 HOST_PLATFORM := windows
@@ -27,7 +28,7 @@ DEVICE_ARG := $(if $(DEVICE),-d "$(DEVICE)",)
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup start build build-android build-ios build-macos build-linux build-windows site site-build format analyze test check clean
+.PHONY: help setup start install-ios build build-android build-ios build-macos build-linux build-windows site site-build format analyze test check clean
 
 help:
 	@echo "MindDeck commands"
@@ -35,6 +36,8 @@ help:
 	@echo "  make setup                    Install app and website dependencies"
 	@echo "  make start                    Run on the default Flutter device"
 	@echo "  make start DEVICE=<device>    Run on a named device"
+	@echo "  make start MODE=release       Run an installable release build"
+	@echo "  make install-ios DEVICE=<id>  Install a release build on an iPhone"
 	@echo "  make build                    Build a release for this host"
 	@echo "  make build PLATFORM=<target>  Build apk, ios, macos, windows, or linux"
 	@echo "  make site                     Start the website locally"
@@ -48,7 +51,13 @@ setup:
 
 start:
 	$(FLUTTER) pub get --enforce-lockfile
-	$(FLUTTER) run $(DEVICE_ARG)
+	$(FLUTTER) run --$(MODE) $(DEVICE_ARG)
+
+install-ios:
+	@if [ -z "$(DEVICE)" ]; then echo "DEVICE is required, for example: make install-ios DEVICE=isaaclins.com"; exit 2; fi
+	$(FLUTTER) pub get --enforce-lockfile
+	$(FLUTTER) build ios --release
+	$(FLUTTER) install --release -d "$(DEVICE)"
 
 build:
 	$(FLUTTER) pub get --enforce-lockfile
