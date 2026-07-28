@@ -351,7 +351,7 @@ jobs:
       ARTIFACT_SUFFIX: ${{ needs.metadata.outputs.artifact_suffix }}
       BUILD_NAME: ${{ needs.metadata.outputs.build_name }}
       BUILD_NUMBER: ${{ needs.metadata.outputs.build_number }}
-      RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
+      PACKAGE_VERSION: ${{ needs.metadata.outputs.package_version }}
 
     steps:
       - name: Check out repository
@@ -404,9 +404,8 @@ jobs:
           cp assets/brand/minddeck-app-icon.png \
             "${package_root}/usr/share/icons/hicolor/1024x1024/apps/minddeck.png"
 
-          package_version="${RELEASE_TAG#v}"
-          package_version="${package_version/-/~}"
-          sed "s/@DEBIAN_VERSION@/${package_version}/" \
+          package_version="${PACKAGE_VERSION/-/~}"
+          sed "s|@DEBIAN_VERSION@|${package_version}|g" \
             linux/packaging/debian/DEBIAN/control \
             > "${package_root}/DEBIAN/control"
           dpkg-deb --root-owner-group --build \
