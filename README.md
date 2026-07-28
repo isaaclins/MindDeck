@@ -68,9 +68,19 @@ Distribution
 Install a current stable Flutter SDK and confirm the toolchain:
 
 ```bash
+make setup
+make start
+```
+
+Use `make start DEVICE=<device>` to select a simulator or connected device.
+`make build` creates a release for the current desktop host, while
+`make build PLATFORM=apk` builds Android. Run `make help` for every shortcut.
+
+The equivalent direct Flutter commands remain available:
+
+```bash
 flutter doctor
 flutter pub get
-dart run build_runner build
 flutter run
 ```
 
