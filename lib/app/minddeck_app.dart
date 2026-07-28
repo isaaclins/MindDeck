@@ -75,7 +75,7 @@ class _MindDeckRouter extends StatefulWidget {
 
 class _MindDeckRouterState extends State<_MindDeckRouter> {
   static final _linkBaseUri = Uri.parse(
-    'https://isaaclins.github.io/MindDeck/open',
+    'https://isaaclins.com/MindDeck/open',
   );
 
   late final MindDeckSharingService _sharingService;

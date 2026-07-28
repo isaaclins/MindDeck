@@ -31,7 +31,7 @@ MindDeck serializes a deck into a versioned canonical snapshot, compresses it,
 and places the payload after the URL fragment:
 
 ```text
-https://isaaclins.github.io/MindDeck/open#md1.<payload>
+https://isaaclins.com/MindDeck/open#md1.<payload>
 ```
 
 URL fragments are not sent to the web server. The bridge page attempts to open
@@ -97,7 +97,7 @@ npm run build
 ```
 
 The production site is deployed from GitHub Actions to
-<https://isaaclins.github.io/MindDeck/>.
+<https://isaaclins.com/MindDeck/>.
 
 ## Releases
 
