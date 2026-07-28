@@ -1,7 +1,13 @@
 SHELL := /bin/sh
 
+CODEX_FLUTTER_SDK := $(HOME)/.cache/codex/flutter-stable
+ifneq ($(wildcard $(CODEX_FLUTTER_SDK)/bin/flutter),)
+FLUTTER ?= $(CODEX_FLUTTER_SDK)/bin/flutter
+DART ?= $(CODEX_FLUTTER_SDK)/bin/dart
+else
 FLUTTER ?= flutter
 DART ?= dart
+endif
 NPM ?= npm
 DEVICE ?=
 
